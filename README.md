@@ -1,8 +1,13 @@
 # dynamic_color_mapping
 Mix of code for dynamically binning LROC NAC DTMs for colorshades.
 
+Google Slides presentation: https://docs.google.com/presentation/d/10UuWIw2NIz4KwdQxxvrJBYSTRJAvl0tSN7P51B736Lk/edit?usp=sharing
+
 Primary algorithm for binning:
 Data Driven Color Mapping. Eismann, M., G. Albuquerque, M. Magnor. International Workshop on Visual Analytics (2011). https://www.cg.cs.tu-bs.de/upload/publications/Eisemann11DDC.pdf
+
+Colorbrewer2 Colormap:
+https://colorbrewer2.org/#type=diverging&scheme=RdYlBu&n=11
 
 Python Matplotlib color maps:
 https://bids.github.io/colormap/
