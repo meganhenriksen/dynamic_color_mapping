@@ -1,0 +1,108 @@
+#!/bin/csh
+
+#
+# $URL: https://repos.ser.asu.edu/svn/lroc/SOCETSET/tags/release_20151105_1/bin/make_pds_products $
+# 
+# Copyright (C) 2011 by Arizona State University and Mark Robinson.
+# All rights reserved.
+#
+# $Author: mhenriksen $
+#   $Date: 2015-07-14 14:43:34 -0700 (Tue, 14 Jul 2015) $
+#    $Rev: 16469 $
+#
+# The sitename is the same name as the directory name (in ALL CAPS, up to 11 characters), or it can be passed
+# as an argument (in ALL CAPS)
+#
+# Make sure the directory has the mandatory 6 files: dem, fom, and 4 ortho-rectified images in ISIS cube format
+# The dem must be named *_dem.cub
+# The FOM must be named *_FOM.cub
+# The ortho-rectified images must be the imagename_resolution.cub (e.g. M136648682_2m.cub or M136648682_50cm.cub)
+#
+# This script converts 6 files associated with the NAC DEM to PDS-ready products.
+# I do not guarantee this script will work! Use at your own risk.
+#
+# This script requires:
+#	
+#       GDAL
+#       ImageMagick
+
+if ($#argv == 0) then
+  echo "Usage: $0 sitename [lut file] [dem]"
+  exit 3
+else if ($#argv == 1 ) then
+  set sitename = `echo $1`
+  set lut = `echo LMMP_color_medium_SN.lut`
+  set dem_from = `ls *dem.cub`
+else if ($#argv == 2 ) then
+  set sitename = `echo $1`
+  set lut = `echo $2`
+  set dem_from = `ls *dem.cub`
+else if ($#argv == 3 ) then
+  set sitename = `echo  $1`
+  set lut = `echo $2 `
+  set dem_from = `echo $3 `
+else
+  echo "Usage: $0 sitename [lut file] [dem]"
+endif
+
+alias MATH 'set \!:1 = `echo "\!:3-$" | bc -l`'
+
+
+set basename = `echo "$sitename"` 	
+#TODO deal with this if NAC DTM.
+set dem_tif_to = `echo $basename".tif"`
+set clrshade_to = `echo $basename"_CLRSHADE.tif"`
+set colormap_to = `echo $basename"_COLORMAP.tif"`
+set clrshade_legend_to = `echo $basename"_CLRSHADE_LEGEND.tif"`
+set shade_to = `echo $basename"_SHADE.tif"`
+
+#Determine which directory this script is called from in order to find some extra files
+echo 'Determine which directory this script is called from in order to find some extra files...'
+set scriptdir = `dirname $0`
+set basedir = `dirname $scriptdir`
+
+#Copy over LUTs and other necessary files.
+echo 'Copy over LUTs and other necessary files...'
+
+#Use GDAL to create various products
+echo 'Use GDAL to create various products...'
+gdal_translate $dem_from $dem_tif_to
+gdaldem hillshade -z 1 $dem_from $shade_to
+gdaldem color-relief $dem_from $lut colorshade_32bit.tif
+#gdaldem slope $dem_from slope_32bit.tif
+#gdaldem color-relief slope_32bit.tif LMMP_color_slopeDeg_discrete.lut slopeshade_32bit.tif
+
+#Blend color and hillshade together
+echo 'Blend color and hillshade together...'
+composite -dissolve 50 $shade_to colorshade_32bit.tif colorshade_blend.tif
+##composite -dissolve 50 $shade_to slopeshade_32bit.tif slopeshade_blend.tif
+#convert colorshade_blend.tif -level 30%,100% colorshade_level.tif
+convert colorshade_blend.tif -level 30%,100% colorshade_level.tif
+
+#Add header information to colorshade and slopeshade files
+#echo 'Add header information to colorshade and slopeshade files...'
+listgeo $shade_to > geo_header.dat
+geotifcp -g geo_header.dat colorshade_level.tif $clrshade_to
+geotifcp -g geo_header.dat colorshade_32bit.tif $colormap_to
+
+#Obtain elevation min/max information from gdalinfo and make legend.
+echo 'Obtain elevation min/max information from gdalinfo and make legend...'
+gdalinfo -mm $dem_from > deminfo.txt
+foreach line (`cat "deminfo.txt"`)
+  set line_min_max = `echo $line | awk '{print index($0,"Min/Max")}'`
+  if ($line_min_max == 1) setenv min `echo $line | awk '{print substr($0,9,index($0,",")-index($0,"=")-1)}'`
+  if ($line_min_max == 1) setenv max `echo $line | awk '{print substr($0,index($0,",")+1)}'`
+end
+
+${scriptdir}/auto_colorbar.sh $lut $min $max
+mv -f legend.png ${basename}_LEGEND.png
+
+echo "MIN = $min "
+echo "MAX = $max"
+#${scriptdir}/auto_colorbar.sh $lut $min $max
+
+rm -f colorshade_32bit.tif colorshade_level.tif colorshade_blend.tif
+rm -f deminfo.txt geo_header.dat
+rm -f legend.png
+rm -f *.aux.xml
+rm -f print.prt 
