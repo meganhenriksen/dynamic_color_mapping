@@ -18,6 +18,9 @@ https://ai.googleblog.com/2019/08/turbo-improved-rainbow-colormap-for.html
 Python:https://gist.github.com/mikhailov-work/ee72ba4191942acecc03fe6da94fc73f (matplotlib compatible version in comments):
 Matlab (tweaked to behave like the matplotlib maps):https://gist.github.com/nikolaskaralis/b19a1d192e6972d73ab7a0a1005a0e17
 
+Matlab Stack Data Structure:
+Brian Moore (2020). Data Structures (https://www.mathworks.com/matlabcentral/fileexchange/45123-data-structures), MATLAB Central File Exchange. Retrieved May 28, 2020.
+
 Other software:
 GDAL: https://gdal.org/
 ImageMagick:https://imagemagick.org/index.php
